@@ -8,7 +8,6 @@
 
 import Foundation
 
-
 /// A node in the trie
 class TrieNode<T: Hashable> {
   var value: T?
@@ -18,8 +17,7 @@ class TrieNode<T: Hashable> {
   var isLeaf: Bool {
     return children.count == 0
   }
-  
-  
+
   /// Initializes a node.
   ///
   /// - Parameters:
@@ -29,7 +27,7 @@ class TrieNode<T: Hashable> {
     self.value = value
     self.parentNode = parentNode
   }
-  
+
   /// Adds a child node to self.  If the child is already present,
   /// do nothing.
   ///
@@ -45,54 +43,53 @@ class TrieNode<T: Hashable> {
 /// A trie data structure containing words.  Each node is a single
 /// character of a word.
 class Trie: NSObject, NSCoding {
-    typealias Node = TrieNode<Character>
-    /// The number of words in the trie
-    public var count: Int {
-        return wordCount
-    }
-    /// Is the trie empty?
-    public var isEmpty: Bool {
-        return wordCount == 0
-    }
-    /// All words currently in the trie
-    public var words: [String] {
-        return wordsInSubtrie(rootNode: root, partialWord: "")
-    }
-    fileprivate let root: Node
-    fileprivate var wordCount: Int
+  typealias Node = TrieNode<Character>
+  /// The number of words in the trie
+  public var count: Int {
+    return wordCount
+  }
+  /// Is the trie empty?
+  public var isEmpty: Bool {
+    return wordCount == 0
+  }
+  /// All words currently in the trie
+  public var words: [String] {
+    return wordsInSubtrie(rootNode: root, partialWord: "")
+  }
+  fileprivate let root: Node
+  fileprivate var wordCount: Int
 
-    /// Creates an empty trie.
-    override init() {
-        root = Node()
-        wordCount = 0
-        super.init()
-    }
+  /// Creates an empty trie.
+  override init() {
+    root = Node()
+    wordCount = 0
+    super.init()
+  }
 
-    // MARK: NSCoding
+  // MARK: NSCoding
 
-    /// Initializes the trie with words from an archive
-    ///
-    /// - Parameter decoder: Decodes the archive
-    required convenience init?(coder decoder: NSCoder) {
-        self.init()
-        let words = decoder.decodeObject(forKey: "words") as? [String]
-        for word in words! {
-            self.insert(word: word)
-        }
+  /// Initializes the trie with words from an archive
+  ///
+  /// - Parameter decoder: Decodes the archive
+  required convenience init?(coder decoder: NSCoder) {
+    self.init()
+    let words = decoder.decodeObject(forKey: "words") as? [String]
+    for word in words! {
+      self.insert(word: word)
     }
+  }
 
-    /// Encodes the words in the trie by putting them in an array then encoding
-    /// the array.
-    ///
-    /// - Parameter coder: The object that will encode the array
-    func encode(with coder: NSCoder) {
-        coder.encode(self.words, forKey: "words")
-    }
+  /// Encodes the words in the trie by putting them in an array then encoding
+  /// the array.
+  ///
+  /// - Parameter coder: The object that will encode the array
+  func encode(with coder: NSCoder) {
+    coder.encode(self.words, forKey: "words")
+  }
 }
 
 // MARK: - Adds methods: insert, remove, contains
 extension Trie {
-  
   /// Inserts a word into the trie.  If the word is already present,
   /// there is no change.
   ///
@@ -102,7 +99,7 @@ extension Trie {
       return
     }
     var currentNode = root
-    for character in word.lowercased().characters {
+    for character in word.lowercased() {
       if let childNode = currentNode.children[character] {
         currentNode = childNode
       } else {
@@ -117,25 +114,46 @@ extension Trie {
     wordCount += 1
     currentNode.isTerminating = true
   }
-  
+
   /// Determines whether a word is in the trie.
   ///
-  /// - Parameter word: the word to check for
+  /// - Parameters:
+  ///   - word: the word to check for
+  ///   - matchPrefix: whether the search word should match
+  ///   if it is only a prefix of other nodes in the trie
   /// - Returns: true if the word is present, false otherwise.
-  func contains(word: String) -> Bool {
+  func contains(word: String, matchPrefix: Bool = false) -> Bool {
     guard !word.isEmpty else {
       return false
     }
     var currentNode = root
-    for character in word.lowercased().characters {
+    for character in word.lowercased() {
       guard let childNode = currentNode.children[character] else {
         return false
       }
       currentNode = childNode
     }
-    return currentNode.isTerminating
+    return matchPrefix || currentNode.isTerminating
   }
-  
+
+  /// Attempts to walk to the last node of a word.  The
+  /// search will fail if the word is not present. Doesn't
+  /// check if the node is terminating
+  ///
+  /// - Parameter word: the word in question
+  /// - Returns: the node where the search ended, nil if the
+  /// search failed.
+  private func findLastNodeOf(word: String) -> Node? {
+    var currentNode = root
+    for character in word.lowercased() {
+      guard let childNode = currentNode.children[character] else {
+        return nil
+      }
+      currentNode = childNode
+    }
+    return currentNode
+  }
+
   /// Attempts to walk to the terminating node of a word.  The
   /// search will fail if the word is not present.
   ///
@@ -143,16 +161,12 @@ extension Trie {
   /// - Returns: the node where the search ended, nil if the
   /// search failed.
   private func findTerminalNodeOf(word: String) -> Node? {
-    var currentNode = root
-    for character in word.lowercased().characters {
-      guard let childNode = currentNode.children[character] else {
-        return nil
-      }
-      currentNode = childNode
+    if let lastNode = findLastNodeOf(word: word) {
+      return lastNode.isTerminating ? lastNode : nil
     }
-    return currentNode.isTerminating ? currentNode : nil
+    return nil
   }
-  
+
   /// Deletes a word from the trie by starting with the last letter
   /// and moving back, deleting nodes until either a non-leaf or a
   /// terminating node is found.
@@ -171,7 +185,7 @@ extension Trie {
       }
     }
   }
-  
+
   /// Removes a word from the trie.  If the word is not present or
   /// it is empty, just ignore it.  If the last node is a leaf,
   /// delete that node and higher nodes that are leaves until a
@@ -194,14 +208,14 @@ extension Trie {
     }
     wordCount -= 1
   }
-  
+
   /// Returns an array of words in a subtrie of the trie
   ///
   /// - Parameters:
   ///   - rootNode: the root node of the subtrie
   ///   - partialWord: the letters collected by traversing to this node
   /// - Returns: the words in the subtrie
-  func wordsInSubtrie(rootNode: Node, partialWord: String) -> [String] {
+  fileprivate func wordsInSubtrie(rootNode: Node, partialWord: String) -> [String] {
     var subtrieWords = [String]()
     var previousLetters = partialWord
     if let value = rootNode.value {
@@ -215,5 +229,26 @@ extension Trie {
       subtrieWords += childWords
     }
     return subtrieWords
+  }
+
+  /// Returns an array of words in a subtrie of the trie that start
+  /// with given prefix
+  ///
+  /// - Parameters:
+  ///   - prefix: the letters for word prefix
+  /// - Returns: the words in the subtrie that start with prefix
+  func findWordsWithPrefix(prefix: String) -> [String] {
+    var words = [String]()
+    let prefixLowerCased = prefix.lowercased()
+    if let lastNode = findLastNodeOf(word: prefixLowerCased) {
+      if lastNode.isTerminating {
+        words.append(prefixLowerCased)
+      }
+      for childNode in lastNode.children.values {
+        let childWords = wordsInSubtrie(rootNode: childNode, partialWord: prefixLowerCased)
+        words += childWords
+      }
+    }
+    return words
   }
 }

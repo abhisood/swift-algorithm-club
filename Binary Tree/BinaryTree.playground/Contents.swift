@@ -18,14 +18,12 @@ extension BinaryTree: CustomStringConvertible {
   public var description: String {
     switch self {
     case let .node(left, value, right):
-      return "value: \(value), left = [" + left.description + "], right = [" + right.description + "]"
+      return "value: \(value), left = [\(left.description)], right = [\(right.description)]"
     case .empty:
       return ""
     }
   }
 }
-
-
 
 // leaf nodes
 let node5 = BinaryTree.node(.empty, "5", .empty)
@@ -49,8 +47,6 @@ let tree = BinaryTree.node(timesLeft, "+", timesRight)
 
 print(tree)
 tree.count  // 12
-
-
 
 extension BinaryTree {
   public func traverseInOrder(process: (T) -> Void) {
